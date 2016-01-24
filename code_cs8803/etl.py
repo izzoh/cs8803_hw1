@@ -1,4 +1,6 @@
 import utils
+import pandas as pd
+import datetime
 
 def read_csv(filepath):
     
@@ -10,13 +12,13 @@ def read_csv(filepath):
     '''
 
     #Columns in events.csv - patient_id,event_id,event_description,timestamp,value
-    events = ''
+    events = pd.read_csv(filepath + 'events.csv')
     
     #Columns in mortality_event.csv - patient_id,timestamp,label
-    mortality = ''
+    mortality = pd.read_csv(filepath + 'mortality_events.csv')
 
     #Columns in event_feature_map.csv - idx,event_id
-    feature_map = ''
+    feature_map = pd.read_csv(filepath + 'event_feature_map.csv')
 
     return events, mortality, feature_map
 
@@ -44,7 +46,18 @@ def calculate_index_date(events, mortality, deliverables_path):
     Return indx_date
     '''
 
-    indx_date = ''
+    dead_ids = mortality.patient_id.unique()
+
+    #First calculate index_date of deceased patients
+    deceased_index_date = mortality.groupby('patient_id').timestamp.\
+        agg(lambda x: datetime.datetime.strptime(x.min(), "%Y-%m-%d") - datetime.timedelta(days=30))
+
+    alive_index_date = events[events['patient_id'].isin(dead_ids) == False].groupby('patient_id').timestamp.\
+        agg(lambda x: datetime.datetime.strptime(x.max(), "%Y-%m-%d"))
+
+    indx_date = pd.concat([deceased_index_date, alive_index_date], axis=0)
+    indx_date.name = 'indx_date'
+    indx_date.to_csv(deliverables_path + 'etl_index_dates.csv', index=True, header=True)
     return indx_date
 
 

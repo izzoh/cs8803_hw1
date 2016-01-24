@@ -1,5 +1,5 @@
 from nose.tools import with_setup, eq_, ok_,nottest
-from code.etl import read_csv, create_features, save_svmlight, calculate_index_date, filter_events, aggregate_events
+from code_cs8803.etl import read_csv, create_features, save_svmlight, calculate_index_date, filter_events, aggregate_events
 import datetime 
 import pandas as pd
 import datetime

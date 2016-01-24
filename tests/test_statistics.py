@@ -1,5 +1,5 @@
 from nose.tools import with_setup, eq_, ok_
-from code.event_statistics import read_csv, record_length_metrics, encounter_count_metrics, event_count_metrics
+from code_cs8803.event_statistics import read_csv, record_length_metrics, encounter_count_metrics, event_count_metrics
 import filecmp 
 import os, errno
 
