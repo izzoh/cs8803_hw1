@@ -1,6 +1,7 @@
 import utils
 import pandas as pd
 import datetime
+import numpy as np
 
 def read_csv(filepath):
     
@@ -83,12 +84,16 @@ def filter_events(events, indx_date, deliverables_path):
 
     Return filtered_events
     '''
+    obs_window = 2000
 
-    filtered_events= ''
+    events['timestamp'] = events['timestamp'].apply(lambda x: datetime.datetime.strptime(x, "%Y-%m-%d"))
+
+    filtered_events= events[events.timestamp <= indx_date.values[0]][events.timestamp >= (indx_date.values[0] - datetime.timedelta(days=2000))]
+    filtered_events.to_csv(deliverables_path + 'etl_filtered_events.csv', columns=['patient_id', 'event_id', 'value'], index=False)
     return filtered_events
 
 
-def aggregate_events(filtered_events_df, mortality_df,feature_map_df, deliverables_path):
+def aggregate_events(filtered_events_df, mortality_df, feature_map_df, deliverables_path):
     
     '''
     TODO: This function needs to be completed.
@@ -112,7 +117,14 @@ def aggregate_events(filtered_events_df, mortality_df,feature_map_df, deliverabl
 
     Return filtered_events
     '''
-    aggregated_events = ''
+    filtered_events_df['event_id'] = filtered_events_df['event_id'].\
+        apply(lambda x: feature_map_df.loc[feature_map_df.event_id == x, 'idx'].values[0])
+    filtered_events_df = filtered_events_df.dropna(thresh=1)
+    filtered_events_df = filtered_events_df.rename(columns={'event_id': 'feature_id', 'value': 'feature_value'})
+    aggregated_events = filtered_events_df.groupby(['patient_id', 'feature_id'], as_index=False)['feature_value'].agg(lambda x: x.mean())
+    aggregated_events['feature_value'] = aggregated_events.groupby(['patient_id', 'feature_id'])['feature_value'].transform(lambda x: x / x.max())
+    aggregated_events.to_csv(deliverables_path + 'etl_aggregated_events.csv', index=False)
+
     return aggregated_events
 
 def create_features(events, mortality, feature_map):
