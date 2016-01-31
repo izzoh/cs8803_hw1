@@ -47,7 +47,7 @@ def classification_metrics(Y_pred, Y_true):
     # TODO: Calculate the above mentioned metrics
     # NOTE: It is important to provide the output in the same order
     accuracy = accuracy_score(Y_true, Y_pred)
-    auc_score = roc_auc_score(Y_true, Y_pred)
+    auc_score = roc_auc_score(Y_true.astype(int), Y_pred)
     precision = precision_score(Y_true, Y_pred)
     recall = recall_score(Y_true, Y_pred)
     f1 = f1_score(Y_true, Y_pred)
