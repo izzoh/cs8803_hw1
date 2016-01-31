@@ -2,6 +2,7 @@ import utils
 import pandas as pd
 import datetime
 import numpy as np
+from code_cs8803.utils import bag_to_svmlight
 
 def read_csv(filepath):
     
@@ -51,7 +52,7 @@ def calculate_index_date(events, mortality, deliverables_path):
 
     #First calculate index_date of deceased patients
     deceased_index_date = mortality.groupby('patient_id').timestamp.\
-        agg(lambda x: datetime.datetime.strptime(x.min(), "%Y-%m-%d") - datetime.timedelta(days=30))
+        agg(lambda x: datetime.datetime.strptime(x.max(), "%Y-%m-%d") - datetime.timedelta(days=30))
 
     alive_index_date = events[events['patient_id'].isin(dead_ids) == False].groupby('patient_id').timestamp.\
         agg(lambda x: datetime.datetime.strptime(x.max(), "%Y-%m-%d"))
@@ -88,7 +89,11 @@ def filter_events(events, indx_date, deliverables_path):
 
     events['timestamp'] = events['timestamp'].apply(lambda x: datetime.datetime.strptime(x, "%Y-%m-%d"))
 
-    filtered_events= events[events.timestamp <= indx_date.values[0]][events.timestamp >= (indx_date.values[0] - datetime.timedelta(days=2000))]
+    filtered_events = pd.DataFrame()
+    for i in indx_date.index:
+        mask = (events['patient_id'] == i) & (events['timestamp'] <= indx_date[i]) & (events['timestamp'] >= (indx_date[i] - datetime.timedelta(days=obs_window)))
+        filtered_events = filtered_events.append(events.loc[mask])
+
     filtered_events.to_csv(deliverables_path + 'etl_filtered_events.csv', columns=['patient_id', 'event_id', 'value'], index=False)
     return filtered_events
 
@@ -117,13 +122,30 @@ def aggregate_events(filtered_events_df, mortality_df, feature_map_df, deliverab
 
     Return filtered_events
     '''
-    filtered_events_df['event_id'] = filtered_events_df['event_id'].\
+    filtered_events_df = filtered_events_df.dropna()
+
+    diag_events_df = filtered_events_df[filtered_events_df['event_id'].str.contains("DIAG|DRUG")]
+    lab_events_df = filtered_events_df[filtered_events_df['event_id'].str.contains("LAB")]
+
+    diag_events_df = diag_events_df.groupby(['patient_id', 'event_id'],as_index=False)['value'].sum()
+    lab_events_df = lab_events_df.groupby(['patient_id', 'event_id'], as_index=False)['value'].count()
+
+    diag_events_df['event_id'] = diag_events_df['event_id'].\
         apply(lambda x: feature_map_df.loc[feature_map_df.event_id == x, 'idx'].values[0])
-    filtered_events_df = filtered_events_df.dropna(thresh=1)
-    filtered_events_df = filtered_events_df.rename(columns={'event_id': 'feature_id', 'value': 'feature_value'})
-    aggregated_events = filtered_events_df.groupby(['patient_id', 'feature_id'], as_index=False)['feature_value'].agg(lambda x: x.mean())
-    aggregated_events['feature_value'] = aggregated_events.groupby(['patient_id', 'feature_id'])['feature_value'].transform(lambda x: x / x.max())
-    aggregated_events.to_csv(deliverables_path + 'etl_aggregated_events.csv', index=False)
+    diag_events_df = diag_events_df.rename(columns={'event_id': 'feature_id', 'value': 'feature_value'})
+
+    lab_events_df['event_id'] = lab_events_df['event_id'].\
+        apply(lambda x: feature_map_df.loc[feature_map_df.event_id == x, 'idx'].values[0])
+    lab_events_df = lab_events_df.rename(columns={'event_id': 'feature_id', 'value': 'feature_value'})
+
+    combined_df = [diag_events_df, lab_events_df]
+    combined_df = pd.concat(combined_df)
+
+    combined_df['feature_value'] = combined_df.groupby('feature_id', as_index=False)['feature_value'].transform(lambda x: x/x.max())
+
+    aggregated_events = combined_df
+
+    aggregated_events.to_csv(deliverables_path + 'etl_aggregated_events.csv', columns=['patient_id', 'feature_id', 'feature_value'], index=False)
 
     return aggregated_events
 
@@ -135,7 +157,7 @@ def create_features(events, mortality, feature_map):
     indx_date = calculate_index_date(events, mortality, deliverables_path)
 
     #Filter events in the observation window
-    filtered_events = filter_events(events, indx_date,  deliverables_path)
+    filtered_events = filter_events(events, indx_date, deliverables_path)
     
     #Aggregate the event values for each patient 
     aggregated_events = aggregate_events(filtered_events, mortality, feature_map, deliverables_path)
@@ -145,10 +167,18 @@ def create_features(events, mortality, feature_map):
     1. patient_features :  Key - patient_id and value is array of tuples(feature_id, feature_value)
     2. mortality : Key - patient_id and value is mortality label
     '''
-    patient_features = {}
-    mortality = {}
+    patient_features_dict = {}
+    for index, row in aggregated_events.iterrows():
+        if row['patient_id'] not in patient_features_dict.keys():
+            patient_features_dict[row['patient_id']] = []
 
-    return patient_features, mortality
+        patient_features_dict[row['patient_id']].append((row['feature_id'], row['feature_value']))
+
+    mortality_list = {}
+    for index, row in mortality.iterrows():
+        mortality_list[row['patient_id']] = row['label']
+
+    return patient_features_dict, mortality_list
 
 def save_svmlight(patient_features, mortality, op_file, op_deliverable):
     
@@ -165,8 +195,19 @@ def save_svmlight(patient_features, mortality, op_file, op_deliverable):
     deliverable1 = open(op_file, 'w')
     deliverable2 = open(op_deliverable, 'w')
     
-    deliverable1.write("");
-    deliverable2.write("");
+    deliverable1.write("")
+
+    for key, items in patient_features.items():
+        op_text = str(int(mortality[key])) + " " + bag_to_svmlight(sorted(items))
+        deliverable1.write(op_text)
+
+    for key, items in patient_features.items():
+        op_text = str(int(key)) + " " + str(mortality[key]) + " " + bag_to_svmlight(sorted(items))
+        deliverable2.write(op_text)
+
+    deliverable1.close()
+    deliverable2.close()
+
 
 def main():
     train_path = '../data/train/'

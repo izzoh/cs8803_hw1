@@ -1,7 +1,7 @@
 from nose.tools import with_setup, ok_, eq_, assert_almost_equals, nottest
-from code.utils import get_data_from_svmlight
-from code.models import logistic_regression_pred,svm_pred,decisionTree_pred,classification_metrics
-from code.cross import get_acc_auc_kfold
+from code_cs8803.utils import get_data_from_svmlight
+from code_cs8803.models import logistic_regression_pred,svm_pred,decisionTree_pred,classification_metrics
+from code_cs8803.cross import get_acc_auc_kfold
 
 def test_auc_cv():
 	expected = 0.707577330303

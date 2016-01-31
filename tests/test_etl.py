@@ -151,5 +151,9 @@ def test_features_order():
     patient_features = {2293.0: [(2741.0, 1.0), (2751.0, 1.0), (2760.0, 1.0), (2841.0, 1.0), (2880.0, 1.0), (2914.0, 1.0), (2948.0, 1.0), (3008.0, 1.0), (3049.0, 1.0), (1193.0, 1.0), (1340.0, 1.0), (1658.0, 1.0), (1723.0, 1.0), (2341.0, 1.0), (2414.0, 1.0)]}
     mortality = {2293.0: 1.0}
     save_svmlight(patient_features, mortality, VALIDATION_FEATURES, VALIDATION_DELIVERABLE)
-    result = filecmp.cmp('tests/expected_features.train', VALIDATION_DELIVERABLE)
-    eq_(True, result, "Features are not same")
+    fh1 = open('tests/expected_features.train')
+    fh2 = open(VALIDATION_DELIVERABLE)
+    for line1, line2 in zip(fh1.readlines(), fh2.readlines()):
+        eq_(line1.strip(), line2.strip(), "Features are not the same")
+    fh1.close()
+    fh2.close()
