@@ -198,11 +198,19 @@ def save_svmlight(patient_features, mortality, op_file, op_deliverable):
     deliverable1.write("")
 
     for key, items in patient_features.items():
-        op_text = str(int(mortality[key])) + " " + bag_to_svmlight(sorted(items))
+        if key in mortality.keys():
+            op_text = str(int(mortality[key])) + " " + bag_to_svmlight(sorted(items))
+        else:
+            op_text = "0 " + bag_to_svmlight(sorted(items))
+        op_text += '\n'
         deliverable1.write(op_text)
 
     for key, items in patient_features.items():
-        op_text = str(int(key)) + " " + str(mortality[key]) + " " + bag_to_svmlight(sorted(items))
+        if key in mortality.keys():
+            op_text = str(int(key)) + " " + str(mortality[key]) + " " + bag_to_svmlight(sorted(items))
+        else:
+            op_text = str(int(key)) + " 0 " + bag_to_svmlight(sorted(items))
+        op_text += '\n'
         deliverable2.write(op_text)
 
     deliverable1.close()

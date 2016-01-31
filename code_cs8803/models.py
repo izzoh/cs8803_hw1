@@ -13,7 +13,7 @@ import utils
 def logistic_regression_pred(X_train, Y_train, X_test):
     # TODO: train a logistic regression classifier using X_train and Y_train. Use this to predict labels of X_test
     # use default params for the classifier
-    lr_model = LogisticRegression()
+    lr_model = LogisticRegression(random_state=545510477)
     lr_model.fit(X_train, Y_train)
     Y_pred = lr_model.predict(X_test)
     return Y_pred
@@ -24,7 +24,7 @@ def logistic_regression_pred(X_train, Y_train, X_test):
 def svm_pred(X_train, Y_train, X_test):
     # TODO:train a SVM classifier using X_train and Y_train. Use this to predict labels of X_test
     # use default params for the classifier
-    svm_model = LinearSVC()
+    svm_model = LinearSVC(random_state=545510477)
     svm_model.fit(X_train, Y_train)
     Y_pred = svm_model.predict(X_test)
     return Y_pred
@@ -35,7 +35,7 @@ def svm_pred(X_train, Y_train, X_test):
 def decisionTree_pred(X_train, Y_train, X_test):
     # TODO:train a logistic regression classifier using X_train and Y_train. Use this to predict labels of X_test
     # IMPORTANT: use max_depth as 5. Else your test cases might fail.
-    dt_model = DecisionTreeClassifier()
+    dt_model = DecisionTreeClassifier(max_depth=5, random_state=545510477)
     dt_model.fit(X_train, Y_train)
     Y_pred = dt_model.predict(X_test)
     return Y_pred
